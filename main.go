@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
@@ -60,6 +61,17 @@ func isWithinThreshold(price, target float64) bool {
 func main() {
 	// Configurar sinais para encerramento seguro
 	done := make(chan os.Signal, 1)
+
+	alertTimer := time.NewTimer(0)
+	<-alertTimer.C
+
+	alertEmitted := false
+
+	var lastSymbol string
+
+	red := color.New(color.FgRed).SprintFunc()
+	yellow := color.New(color.FgYellow).SprintFunc()
+
 	signal.Notify(done, os.Interrupt, syscall.SIGTERM)
 
 	// Lista de ativos a serem monitorados
@@ -74,11 +86,11 @@ func main() {
 	// Conectar ao WebSocket da Binance
 	conn, _, err := websocket.DefaultDialer.Dial(binanceWSSURL+"/"+streams, nil)
 	if err != nil {
-		log.Fatalf("Erro ao conectar ao WebSocket da Binance: %v", err)
+		log.Fatalf(red("Erro ao conectar ao WebSocket da Binance: %v"), err)
 	}
 	defer conn.Close()
 
-	log.Println("Conectado ao WebSocket da Binance.")
+	log.Println(yellow("Conectado ao WebSocket da Binance."))
 
 	// Gerar um UUID para a requisição
 	requestID := uuid.New().String()
@@ -120,11 +132,24 @@ func main() {
 					log.Printf("Erro ao converter preço: %v", err)
 					continue
 				}
+
 				// Verificar alertas para o ativo
 				if targets, ok := priceTargets[trade.Symbol]; ok {
 					for _, target := range targets {
-						if isWithinThreshold(currentPrice, target) {
-							// Texto em verde com fundo preto
+						if isWithinThreshold(currentPrice, target) && (!alertEmitted || lastSymbol != trade.Symbol) {
+
+							// Marcar que o alerta foi emitido
+							alertEmitted = true
+							lastSymbol = trade.Symbol
+
+							// Reiniciar o timer para permitir novos alertas após 1 minuto
+							if alertTimer != nil {
+								alertTimer.Stop()
+							}
+							alertTimer = time.AfterFunc(1*time.Minute, func() {
+								alertEmitted = false
+							})
+
 							green := color.New(color.FgGreen, color.BgBlack).SprintFunc()
 							log.Printf(green("[ALERTA] %s atingiu preço de $%f, próximo do alvo $%f"),
 								trade.Symbol, currentPrice, target)
@@ -133,6 +158,12 @@ func main() {
 					}
 				} else {
 					log.Printf("[%s] Preço atual: $%.2f", trade.Symbol, currentPrice)
+				}
+				// Verificar se o timer expirou para permitir novos alertas
+				select {
+				case <-alertTimer.C:
+					alertEmitted = false
+				default:
 				}
 			}
 		}
