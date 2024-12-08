@@ -51,7 +51,7 @@ var chatIds = []int64{
 
 // Alvos de preço
 var priceTargets = map[string][]float64{
-	"LINKUSDT":   {21.7, 20.8, 18.44, 25.00, 26.00},
+	"LINKUSDT":   {21.7, 20.8, 18.44, 25.00},
 	"KSMUSDT":    {40, 37},
 	"COTIUSDT":   {15.4, 14.4, 12.7},
 	"SOLUSDT":    {210, 200, 190},
@@ -83,7 +83,7 @@ func isWithinThreshold(price, target float64) bool {
 
 func botTelegram() {
 	red := color.New(color.FgRed).SprintFunc()
-	botAPI, err := tgbotapi.NewBotAPI("7675374499:AAGglbde62KF5g_aUrlwrTbLSJfCDX2DPhQ")
+	botAPI, err := tgbotapi.NewBotAPI("")
 	if err != nil {
 		log.Print(red("Erro ao conectar na api do telegram"))
 	}
