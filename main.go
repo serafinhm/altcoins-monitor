@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -11,11 +12,23 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
 const binanceWSSURL = "wss://stream.binance.com:9443/ws"
+
+var (
+	bot *tgbotapi.BotAPI
+)
+
+type TradeTelegramMessage struct {
+	ChatID int64
+	Symbol string
+	Price  float64
+	Target float64
+}
 
 // TradeMessage representa a estrutura de dados recebida para preços.
 type TradeMessage struct {
@@ -30,26 +43,36 @@ type TradeMessage struct {
 	Ignore        bool   `json:"M"` // Campo ignorado
 }
 
+var chatIds = []int64{
+	-1002314879454,
+	6753790669,
+	6717764833,
+}
+
 // Alvos de preço
 var priceTargets = map[string][]float64{
-	"ICPUSDT":    {13.6, 13, 12.5},
-	"LINKUSDT":   {21.7, 20.8, 18.44},
+	"LINKUSDT":   {21.7, 20.8, 18.44, 25.00, 26.00},
 	"KSMUSDT":    {40, 37},
-	"DIAUSDT":    {0.83, 0.73},
-	"COTIUSDT":   {15, 14.4, 13.5},
+	"COTIUSDT":   {15.4, 14.4, 12.7},
 	"SOLUSDT":    {210, 200, 190},
 	"XLMUSDT":    {0.42, 0.36, 0.30},
-	"KDAUSDT":    {1.377, 1.275, 1.15},
 	"ALGOUSDT":   {0.42, 0.36, 0.30},
-	"PENDLEUSDT": {6.1, 5.9, 5.6},
+	"PENDLEUSDT": {5.9, 5.6, 5.4},
 	"RNDRUSDT":   {9, 8, 7.2},
-	"AAVEUSDT":   {220, 200, 183},
 	"RAYUSDT":    {4.5, 4, 3.4},
-	"JASMYUSDT":  {0.45},
+	"JASMYUSDT":  {0.045},
 	"GALAUSDT":   {0.50, 0.46, 0.40},
 	"AVAXUSDT":   {47, 43},
+	"KDAUSDT":    {1.31, 1.15, 1},
+	"ICPUSDT":    {13.5, 13, 12.3},
+	"DIAUSDT":    {0.88, 0.84, 0.80},
 	"SUPERUSDT":  {1.6, 1.5},
 	"RSRUSDT":    {0.01800, 0.01500, 0.012},
+	"TAOUSDT":    {680, 655, 635},
+	"ONDOUSDT":   {1.45, 1.28, 1.11},
+	"ZILUSDT":    {0.285, 0.253, 0.2218},
+	"LITUSDT":    {1.1, 1.0, 0.8},
+	"TIAUSDT":    {7.65, 6.8},
 }
 
 func isWithinThreshold(price, target float64) bool {
@@ -58,7 +81,27 @@ func isWithinThreshold(price, target float64) bool {
 	return price >= lowerBound && price <= upperBound
 }
 
+func botTelegram() {
+	red := color.New(color.FgRed).SprintFunc()
+	botAPI, err := tgbotapi.NewBotAPI("7675374499:AAGglbde62KF5g_aUrlwrTbLSJfCDX2DPhQ")
+	if err != nil {
+		log.Print(red("Erro ao conectar na api do telegram"))
+	}
+	bot = botAPI
+}
+
+func sendMessage(message TradeTelegramMessage) {
+	msg := tgbotapi.NewMessage(message.ChatID, fmt.Sprintf("ALERTA: %s atingiu preço de $%.2f, próximo do alvo $%.2f", message.Symbol, message.Price, message.Target))
+	_, err := bot.Send(msg)
+	if err != nil {
+		log.Printf("Erro ao enviar mensagem para o chat %d: %v", message.ChatID, err)
+	}
+}
+
 func main() {
+	// start bot do telegram
+	botTelegram()
+
 	// Configurar sinais para encerramento seguro
 	done := make(chan os.Signal, 1)
 
@@ -101,6 +144,7 @@ func main() {
 		"params": assets,
 		"id":     requestID,
 	}
+
 	if err := conn.WriteJSON(subscribeMessage); err != nil {
 		log.Fatalf("Erro ao subscrever: %v", err)
 	}
@@ -151,6 +195,8 @@ func main() {
 							})
 
 							green := color.New(color.FgGreen, color.BgBlack).SprintFunc()
+							// Enviar alerta para o Telegram
+							sendTelegramChats(trade, currentPrice, target)
 							log.Printf(green("[ALERTA] %s atingiu preço de $%f, próximo do alvo $%f"),
 								trade.Symbol, currentPrice, target)
 
@@ -171,4 +217,16 @@ func main() {
 
 	<-done
 	log.Println("Encerrando...")
+}
+
+func sendTelegramChats(trade TradeMessage, currentPrice float64, target float64) {
+	for _, chatID := range chatIds {
+		message := TradeTelegramMessage{
+			ChatID: chatID,
+			Symbol: trade.Symbol,
+			Price:  currentPrice,
+			Target: target,
+		}
+		sendMessage(message)
+	}
 }
