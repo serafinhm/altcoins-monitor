@@ -32,25 +32,31 @@ type TradeMessage struct {
 
 // Alvos de preço
 var priceTargets = map[string][]float64{
-	"ICPUSDT":    {13.6, 13, 12.5},
-	"LINKUSDT":   {21.7, 20.8, 18.44},
+	"LINKUSDT":   {21.70, 20.8, 18.44},
 	"KSMUSDT":    {40, 37},
-	"DIAUSDT":    {0.83, 0.73},
-	"COTIUSDT":   {15, 14.4, 13.5},
+	"COTIUSDT":   {15.4, 14.4, 12.7},
 	"SOLUSDT":    {210, 200, 190},
 	"XLMUSDT":    {0.42, 0.36, 0.30},
-	"KDAUSDT":    {1.377, 1.275, 1.15},
 	"ALGOUSDT":   {0.42, 0.36, 0.30},
-	"PENDLEUSDT": {6.1, 5.9, 5.6},
+	"PENDLEUSDT": {5.9, 5.6, 5.4},
 	"RNDRUSDT":   {9, 8, 7.2},
-	"AAVEUSDT":   {220, 200, 183},
 	"RAYUSDT":    {4.5, 4, 3.4},
-	"JASMYUSDT":  {0.45},
+	"JASMYUSDT":  {0.045},
 	"GALAUSDT":   {0.50, 0.46, 0.40},
 	"AVAXUSDT":   {47, 43},
+	"KDAUSDT":    {1.31, 1.15, 1},
+	"ICPUSDT":    {13.5, 13, 12.3},
+	"DIAUSDT":    {0.88, 0.84, 0.80},
 	"SUPERUSDT":  {1.6, 1.5},
-	"RSRUSDT":    {0.01800, 0.01500, 0.012},
+	"RSRUSDT":    {0.01500, 0.012},
+	"TAOUSDT":    {680, 655, 635},
+	"ONDOUSDT":   {1.45, 1.28, 1.11},
+	"ZILUSDT":    {0.285, 0.253, 0.2218},
+	"LITUSDT":    {1.1, 1, 0.8},
+	"TIAUSDT":    {7.65, 6.8},
 }
+
+
 
 func isWithinThreshold(price, target float64) bool {
 	lowerBound := target * 0.99 // 1% abaixo do alvo
